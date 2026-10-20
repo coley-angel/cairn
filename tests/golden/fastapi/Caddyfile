@@ -1,0 +1,65 @@
+{
+	auto_https off
+	admin off
+}
+
+:8080 {
+	route {
+		request_header -X-Auth-Request-User
+		request_header -X-Auth-Request-Email
+		request_header -X-Auth-Request-Groups
+		request_header -X-Auth-Request-Preferred-Username
+		request_header -X-Auth-Request-Access-Token
+		request_header -X-Forwarded-User
+		request_header -X-Forwarded-Email
+		request_header -X-Forwarded-Groups
+		request_header -X-Forwarded-Preferred-Username
+		request_header -X-Forwarded-Access-Token
+		request_header -Authorization
+		handle /oauth2/* {
+			reverse_proxy auth:4180 {
+				header_up X-Real-IP {remote_host}
+				header_up X-Forwarded-Uri {uri}
+			}
+		}
+		handle /healthz {
+			reverse_proxy app:8000 {
+				header_up -X-Auth-Request-User
+				header_up -X-Auth-Request-Email
+				header_up -X-Auth-Request-Groups
+				header_up -X-Auth-Request-Preferred-Username
+				header_up -X-Auth-Request-Access-Token
+				header_up -X-Forwarded-User
+				header_up -X-Forwarded-Email
+				header_up -X-Forwarded-Groups
+				header_up -X-Forwarded-Preferred-Username
+				header_up -X-Forwarded-Access-Token
+				header_up -Authorization
+			}
+		}
+		handle {
+			forward_auth auth:4180 {
+				uri /oauth2/auth
+				header_up -X-Auth-Request-User
+				header_up -X-Auth-Request-Email
+				header_up -X-Auth-Request-Groups
+				header_up -X-Auth-Request-Preferred-Username
+				header_up -X-Auth-Request-Access-Token
+				header_up -X-Forwarded-User
+				header_up -X-Forwarded-Email
+				header_up -X-Forwarded-Groups
+				header_up -X-Forwarded-Preferred-Username
+				header_up -X-Forwarded-Access-Token
+				header_up -Authorization
+				header_up X-Real-IP {remote_host}
+				header_up X-Forwarded-Uri {uri}
+				copy_headers X-Auth-Request-User X-Auth-Request-Email X-Auth-Request-Groups X-Auth-Request-Preferred-Username
+				@denied status 401
+				handle_response @denied {
+					redir * /oauth2/sign_in?rd={scheme}://{host}{uri} 302
+				}
+			}
+			reverse_proxy app:8000
+		}
+	}
+}

@@ -1,0 +1,37 @@
+[project]
+name = "cairn"
+version = "0.1.0"
+description = "Golden path for hosted apps: detect the paradigm, then render SSO, access, and a tested deploy contract."
+readme = "README.md"
+requires-python = ">=3.12"
+license = "MIT"
+authors = [{ name = "coley-angel" }]
+keywords = ["sso", "oidc", "deploy", "agent-skills", "platform"]
+dependencies = ["PyYAML>=6.0.2"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3"]
+
+[project.scripts]
+cairn = "cairn.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/coley-angel/cairn"
+Documentation = "https://github.com/coley-angel/cairn/blob/main/docs/how-to.md"
+
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+cairn = ["stub/*.py"]
+
+[tool.pytest.ini_options]
+markers = [
+  "integration: boots a rendered Cairn stack with Docker",
+]
+testpaths = ["tests"]
+pythonpath = ["src"]

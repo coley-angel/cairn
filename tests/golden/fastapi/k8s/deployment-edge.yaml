@@ -1,0 +1,95 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fastapi-edge
+  labels:
+    cairn.dev/app: fastapi
+    cairn.dev/role: edge
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      cairn.dev/app: fastapi
+      cairn.dev/role: edge
+  template:
+    metadata:
+      labels:
+        cairn.dev/app: fastapi
+        cairn.dev/role: edge
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: edge
+          image: caddy:2.9.1
+          command: ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+          ports:
+            - containerPort: 8080
+              name: http
+          readinessProbe:
+            tcpSocket:
+              port: http
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/caddy/Caddyfile
+              subPath: Caddyfile
+              readOnly: true
+            - name: data
+              mountPath: /data
+            - name: configdir
+              mountPath: /config
+            - name: tmp
+              mountPath: /tmp
+        - name: auth
+          image: quay.io/oauth2-proxy/oauth2-proxy:v7.15.2
+          args: ["--config", "/etc/cairn/oauth2-proxy.cfg"]
+          ports:
+            - containerPort: 4180
+              name: auth
+          env:
+            - name: OAUTH2_PROXY_CLIENT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-oidc
+                  key: client-id
+            - name: OAUTH2_PROXY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-oidc
+                  key: client-secret
+            - name: OAUTH2_PROXY_COOKIE_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: fastapi-oidc
+                  key: cookie-secret
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/cairn/oauth2-proxy.cfg
+              subPath: oauth2-proxy.cfg
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: fastapi-edge
+        - name: data
+          emptyDir: {}
+        - name: configdir
+          emptyDir: {}
+        - name: tmp
+          emptyDir: {}

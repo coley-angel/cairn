@@ -1,0 +1,8 @@
+{
+  "name": "node-fixture",
+  "private": true,
+  "description": "Node service fixture. Express and Hono projects with a start script detect as node.",
+  "scripts": {
+    "start": "node server.js"
+  }
+}
